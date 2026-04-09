@@ -22,6 +22,7 @@ use bitcoin::params::Params;
 use bitcoin::Block;
 use bitcoin::BlockHash;
 use bitcoin::Network;
+use bitcoin::ScriptBuf;
 use floresta_common::acchashes;
 use floresta_common::bhash;
 use floresta_common::service_flags;
@@ -64,6 +65,9 @@ pub struct ChainParams {
 
     /// Whether we should enforce BIP-094 "Testnet 4" rules
     pub enforce_bip94: bool,
+
+    /// BIP-325: The signet block challenge script.
+    pub signet_challenge: ScriptBuf,
 }
 
 /// A dns seed is a authoritative DNS server that returns the IP addresses of nodes that are
@@ -299,6 +303,28 @@ fn get_exceptions() -> HashMap<BlockHash, c_uint> {
     HashMap::new()
 }
 
+/// Returns the default Signet challenge script.
+/// This is a 1-of-1 multisig: OP_PUSHNUM_1 `<pubkey>` OP_PUSHNUM_1 OP_CHECKMULTISIG
+/// The default pubkey is the well-known signet key:
+/// 03ad5e0edad18cb1f0fc0d28a3d4f1f3e445640337489abb10404f2d1e086be430
+fn get_default_signet_challenge() -> ScriptBuf {
+    use bitcoin::blockdata::opcodes::all as opcodes;
+    use bitcoin::blockdata::script::Builder;
+
+    let pubkey_hex = [
+        0x03, 0xad, 0x5e, 0x0e, 0xda, 0xd1, 0x8c, 0xb1, 0xf0, 0xfc, 0x0d, 0x28, 0xa3, 0xd4, 0xf1,
+        0xf3, 0xe4, 0x45, 0x64, 0x03, 0x37, 0x48, 0x9a, 0xbb, 0x10, 0x40, 0x4f, 0x2d, 0x1e, 0x08,
+        0x6b, 0xe4, 0x30,
+    ];
+
+    Builder::new()
+        .push_opcode(opcodes::OP_PUSHNUM_1)
+        .push_slice(pubkey_hex)
+        .push_opcode(opcodes::OP_PUSHNUM_1)
+        .push_opcode(opcodes::OP_CHECKMULTISIG)
+        .into_script()
+}
+
 impl AsRef<Params> for ChainParams {
     fn as_ref(&self) -> &Params {
         &self.params
@@ -309,6 +335,8 @@ impl From<Network> for ChainParams {
     fn from(network: Network) -> Self {
         let genesis = genesis_block(Params::new(network));
         let exceptions = get_exceptions();
+        let empty_script = ScriptBuf::new();
+        let signet_challenge = get_default_signet_challenge();
 
         match network {
             Network::Bitcoin => ChainParams {
@@ -322,6 +350,7 @@ impl From<Network> for ChainParams {
                 csv_activation_height: 419_328,
                 exceptions,
                 enforce_bip94: false,
+                signet_challenge: empty_script.clone(),
             },
             Network::Testnet => ChainParams {
                 params: Params::new(network),
@@ -334,6 +363,7 @@ impl From<Network> for ChainParams {
                 csv_activation_height: 770_112,
                 exceptions,
                 enforce_bip94: false,
+                signet_challenge: empty_script.clone(),
             },
             Network::Testnet4 => ChainParams {
                 params: Params::new(network),
@@ -346,6 +376,7 @@ impl From<Network> for ChainParams {
                 csv_activation_height: 1,
                 exceptions,
                 enforce_bip94: true,
+                signet_challenge: empty_script.clone(),
             },
             Network::Signet => ChainParams {
                 params: Params::new(network),
@@ -358,6 +389,7 @@ impl From<Network> for ChainParams {
                 segwit_activation_height: 1,
                 exceptions,
                 enforce_bip94: false,
+                signet_challenge,
             },
             Network::Regtest => ChainParams {
                 params: Params::new(network),
@@ -370,6 +402,7 @@ impl From<Network> for ChainParams {
                 segwit_activation_height: 0,
                 exceptions,
                 enforce_bip94: false,
+                signet_challenge: empty_script,
             },
         }
     }

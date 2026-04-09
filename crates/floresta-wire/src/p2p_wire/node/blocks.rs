@@ -370,7 +370,8 @@ where
             | BlockValidationErrors::BadBip34
             | BlockValidationErrors::BIP94TimeWarp
             | BlockValidationErrors::UnspendableUTXO
-            | BlockValidationErrors::CoinbaseNotMatured => {
+            | BlockValidationErrors::CoinbaseNotMatured
+            | BlockValidationErrors::SignetValidationFailed(_) => {
                 try_and_log!(self.chain.invalidate_block(hash));
 
                 warn!("Block {hash} is invalid, banning peer {block_peer}");

@@ -20,6 +20,7 @@ pub mod consensus;
 #[cfg(feature = "flat-chainstore")]
 pub mod flat_chain_store;
 pub mod partial_chain;
+pub(crate) mod signet;
 pub mod udata;
 
 use alloc::sync::Arc;

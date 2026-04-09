@@ -333,6 +333,25 @@ impl Consensus {
             return Err(BlockValidationErrors::BlockTooBig)?;
         }
 
+        // BIP-325: Validate signet block signature if on signet network
+        #[cfg(feature = "bitcoinconsensus")]
+        if self.parameters.network == bitcoin::Network::Signet {
+            super::signet::validate_signet_block(block, &self.parameters.signet_challenge)
+                .map_err(|e| {
+                    BlockValidationErrors::SignetValidationFailed(alloc::format!(
+                        "Signet validation failed: {}",
+                        e
+                    ))
+                })?;
+        }
+
+        #[cfg(not(feature = "bitcoinconsensus"))]
+        if self.parameters.network == bitcoin::Network::Signet {
+            tracing::warn!(
+                "Signet block validation incomplete — enable 'bitcoinconsensus' feature for full BIP-325 compliance"
+            );
+        }
+
         Ok(txids)
     }
 

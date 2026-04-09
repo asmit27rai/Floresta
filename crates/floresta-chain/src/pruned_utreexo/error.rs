@@ -85,6 +85,7 @@ pub enum BlockValidationErrors {
     CoinbaseNotMatured,
     UnspendableUTXO,
     BIP94TimeWarp,
+    SignetValidationFailed(String),
 }
 
 // Helpful macro for generating a TransactionError
@@ -174,6 +175,9 @@ impl Display for BlockValidationErrors {
             }
             BlockValidationErrors::BIP94TimeWarp => {
                 write!(f, "BIP94 time warp detected")
+            }
+            BlockValidationErrors::SignetValidationFailed(msg) => {
+                write!(f, "Signet validation failed: {msg}")
             }
         }
     }
